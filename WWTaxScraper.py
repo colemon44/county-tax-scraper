@@ -1,51 +1,55 @@
 # import the libraries
-#selenium for chrome automation
-    # instead of importing selenium, you import the webdriver
-        # web driver performs actions and links with the browser
+# selenium for chrome automation
+from tkinter import Tk, Button
+import config
+import logging
+import pymssql
+from datetime import datetime, date, timedelta
+import time
+import pandas as pd
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.keys import Keys
+from selenium import webdriver
+# instead of importing selenium, you import the webdriver
+# web driver performs actions and links with the browser
 from distutils.log import error
 import sys
 import os
 cwd = os.getcwd()
 sys.path.append(cwd)
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-#pandas to create dataframe out of scraped data
-import pandas as pd
-#time to sleep in between requests
-import time
-#datetime to retrieve current date
-from datetime import datetime, date, timedelta
-#pymssql to connect to azure db
-import pymssql
-#logging to create log files locally
-import logging
-#import values from the config file
-import config
-#LA county scraper will make a pop-up box that the user has to click
-from tkinter import Tk, Button
+# pandas to create dataframe out of scraped data
+# time to sleep in between requests
+# datetime to retrieve current date
+# pymssql to connect to azure db
+# logging to create log files locally
+# import values from the config file
+# LA county scraper will make a pop-up box that the user has to click
 
-#creates a log file after every time the code is run
-logging.basicConfig(filename='wedgewood_tax.log', encoding='utf-8', level=logging.DEBUG)
+# creates a log file after every time the code is run
+logging.basicConfig(filename='wedgewood_tax.log',
+                    encoding='utf-8', level=logging.DEBUG)
 logging.debug(f"after all imports")
 
-#service object is the path to chrome webdriver
-    #it's going to be used to activate the webdriver
-s = Service(config.db_conn['driver-path']) #get the driver path from config file- makes it so that you can change later without breaking .exe file
+# service object is the path to chrome webdriver
+# it's going to be used to activate the webdriver
+# get the driver path from config file- makes it so that you can change later without breaking .exe file
+s = Service(config.db_conn['driver-path'])
 
-#add the folder where .exe file is to the executable path
-    # need to do this because otherwise the exe won't be able to find/read from the config file
+# add the folder where .exe file is to the executable path
+# need to do this because otherwise the exe won't be able to find/read from the config file
 logging.debug(f"Chrome driver path {config.db_conn['driver-path']}")
-#print driver path to the console
+# print driver path to the console
 print(config.db_conn['driver-path'])
 
-#db connection string
-conn = pymssql.connect(server=config.db_conn['server'], user=config.db_conn['username'], password=config.db_conn['password'], database=config.db_conn['database'])
+# db connection string
+conn = pymssql.connect(server=config.db_conn['server'], user=config.db_conn['username'],
+                       password=config.db_conn['password'], database=config.db_conn['database'])
 
-logging.debug(f"server={config.db_conn['server']}, user={config.db_conn['username']}, password={config.db_conn['password']}, database={config.db_conn['database']}")
+logging.debug(
+    f"server={config.db_conn['server']}, user={config.db_conn['username']}, password={config.db_conn['password']}, database={config.db_conn['database']}")
 
-#print db connection string to console
+# print db connection string to console
 print(f"server={config.db_conn['server']}, user={config.db_conn['username']}, password={config.db_conn['password']}, database={config.db_conn['database']}")
 
 # create cursor to make queries
@@ -59,70 +63,74 @@ curs = conn.cursor()
 #
 #
 #
-def la_func(apn):
-    #need 2 dictionaries for this one
-        #since there are 2 sections in the site
-    tax_details1 = {
-            'TaxYear':[],
-            'TaxAmnt':[],
-            'DueDate':[],
-            'Note':[],
-            'RetrievalDate':[],
-            'APN':[]
-        }
-    tax_details2 = {
-            'TaxYear':[],
-            'TaxAmnt':[],
-            'DueDate':[],
-            'Note':[],
-            'RetrievalDate':[],
-            'APN':[]
-        }
 
-    #add RetrievalDate and APN, note to the dictionary in case scraper fails
-        #these values can still be used for the log
-    #retrieval date to dict
+
+def la_func(apn):
+    # need 2 dictionaries for this one
+    # since there are 2 sections in the site
+    tax_details1 = {
+        'TaxYear': [],
+        'TaxAmnt': [],
+        'DueDate': [],
+        'Note': [],
+        'RetrievalDate': [],
+        'APN': []
+    }
+    tax_details2 = {
+        'TaxYear': [],
+        'TaxAmnt': [],
+        'DueDate': [],
+        'Note': [],
+        'RetrievalDate': [],
+        'APN': []
+    }
+
+    # add RetrievalDate and APN, note to the dictionary in case scraper fails
+    # these values can still be used for the log
+    # retrieval date to dict
     d1 = date.today()
     rdate = str(d1)
     tax_details1['RetrievalDate'].append(rdate)
     tax_details2['RetrievalDate'].append(rdate)
-    #apn to dict
+    # apn to dict
     tax_details1['APN'].append(apn)
     tax_details2['APN'].append(apn)
-    #note to dict
+    # note to dict
     note = 'Los Angeles '
     tax_details1['Note'].append(note)
     tax_details2['Note'].append(note)
 
     try:
 
-        #Use the WebDriver to visit Clark County Search URL
+        # Use the WebDriver to visit Clark County Search URL
         driver.get("https://vcheck.ttc.lacounty.gov/index.php")
 
-        #get past CAPTcha
+        # get past CAPTcha
         try:
             # make a popup window asking to get past reCATPTCHA
-            root=Tk()
-            Button(root, text="Please fill out the CAPTCHA and click next on the screen to continue. \n When finished, click on this text.", command=root.destroy).pack()
+            root = Tk()
+            Button(root, text="Please fill out the CAPTCHA and click next on the screen to continue. \n When finished, click on this text.",
+                   command=root.destroy).pack()
             root.mainloop()
 
-            #get to search link
+            # get to search link
             try:
-                #Once you've passed CAPTCHA, you can navigate to search link
-                driver.get('https://vcheck.ttc.lacounty.gov/proptax.php?page=screen')
+                # Once you've passed CAPTCHA, you can navigate to search link
+                driver.get(
+                    'https://vcheck.ttc.lacounty.gov/proptax.php?page=screen')
 
-                #need to split up the apn so you can enter them into search box
-                    #diff sections for map book (mb), page (pg), parcel(pl)
+                # need to split up the apn so you can enter them into search box
+                # diff sections for map book (mb), page (pg), parcel(pl)
                 laapn = apn.split('-')
                 mb = laapn[0]
                 pg = laapn[1]
                 pl = laapn[2]
 
-                #3 input boxes for Map Book, Page, and Parcel
+                # 3 input boxes for Map Book, Page, and Parcel
                 mbpath = driver.find_element(by=By.NAME, value='mapbook')
                 pgpath = driver.find_element(by=By.NAME, value='page')
                 plpath = driver.find_element(by=By.NAME, value='parcel')
-                #enter the values into the fields
+                # enter the values into the fields
                 mbpath.send_keys(mb)
                 time.sleep(1)
                 pgpath.send_keys(pg)
@@ -132,29 +140,31 @@ def la_func(apn):
                 plpath.send_keys(Keys.RETURN)
                 time.sleep(1)
 
-                #once the value is entered you need to go to the link showing you the tax info
-                infobutton = driver.find_element(by=By.CLASS_NAME, value='submitButton').click()
+                # once the value is entered you need to go to the link showing you the tax info
+                infobutton = driver.find_element(
+                    by=By.CLASS_NAME, value='submitButton').click()
                 time.sleep(1)
 
-                #gather the data
+                # gather the data
                 try:
-                    #paths for property with no tax due
+                    # paths for property with no tax due
                     is1path = '//*[@id="mainContent"]/table/tbody/tr/td[2]/div/div/table[1]/tbody/tr[6]/td[2]'
                     is2path = '//*[@id="mainContent"]/table/tbody/tr/td[2]/div/div/table[1]/tbody/tr[6]/td[5]'
-                    #paths for property with tax due
+                    # paths for property with tax due
                     ntispath1 = '//*[@id="mainContent"]/table/tbody/tr/td[2]/div/div/table[1]/tbody/tr[6]/td[2]'
                     ntispath2 = '//*[@id="mainContent"]/table/tbody/tr/td[2]/div/div/table[1]/tbody/tr[6]/td[5]'
-                    #looks like the layout is the same whether taxes are due or not
+                    # looks like the layout is the same whether taxes are due or not
 
-                    #there are 2 installment boxes
-                        #we're gonna put each separate one into the TaxData table
-                    #value from first installment box
-                    inst1 = driver.find_element(by=By.XPATH, value=is1path).text
+                    # there are 2 installment boxes
+                    # we're gonna put each separate one into the TaxData table
+                    # value from first installment box
+                    inst1 = driver.find_element(
+                        by=By.XPATH, value=is1path).text
                     inst1 = inst1.replace('$', '')
                     inst1 = inst1.replace(',', '')
                     inst1due = float(inst1)
                     tax_details1['TaxAmnt'].append(inst1due)
-                    #due date from first installment box
+                    # due date from first installment box
                     dd1path = '//*[@id="mainContent"]/table/tbody/tr/td[2]/div/div/table[1]/tbody/tr[7]/td[2]'
                     dd1 = driver.find_element(by=By.XPATH, value=dd1path).text
                     tax_details1['DueDate'].append(dd1)
@@ -176,24 +186,25 @@ def la_func(apn):
                     # tax_details1['TaxYear'].append(tyear)
                     # tax_details2['TaxYear'].append(tyear)
 
-                    #value from second installment box
-                    inst2 = driver.find_element(by=By.XPATH, value=is2path).text
+                    # value from second installment box
+                    inst2 = driver.find_element(
+                        by=By.XPATH, value=is2path).text
                     inst2 = inst2.replace('$', '')
                     inst2 = inst2.replace(',', '')
                     inst2due = float(inst2)
                     tax_details2['TaxAmnt'].append(inst2due)
-                    #due date from second installment box
+                    # due date from second installment box
                     dd2path = '//*[@id="mainContent"]/table/tbody/tr/td[2]/div/div/table[1]/tbody/tr[7]/td[5]'
                     dd2 = driver.find_element(by=By.XPATH, value=dd2path).text
                     if dd2 == ' ':
                         dd2 = ''
                     tax_details2['DueDate'].append(dd2)
 
-                    #turn the 2 dictionaries into pandas dataframes
+                    # turn the 2 dictionaries into pandas dataframes
                     df1 = pd.DataFrame(tax_details1)
                     df2 = pd.DataFrame(tax_details2)
 
-                    #Call writetaxdata function
+                    # Call writetaxdata function
                     WriteTaxData(df1, curs, conn)
                     WriteTaxData(df2, curs, conn)
                     print(df1)
@@ -217,45 +228,46 @@ def la_func(apn):
 
 
 def clark_func(apn):
-    #first, make dictionary to store values
-    #dict will be the same for each site
+    # first, make dictionary to store values
+    # dict will be the same for each site
     tax_details = {
-            'TaxYear':[],
-            'TaxAmnt':[],
-            'DueDate':[],
-            'Note':[],
-            'RetrievalDate':[],
-            'APN':[]
-        }
-    #add RetrievalDate and APN, note to the dictionary in case scraper fails
-        #these values can still be used for the log
-    #retrieval date to dict
+        'TaxYear': [],
+        'TaxAmnt': [],
+        'DueDate': [],
+        'Note': [],
+        'RetrievalDate': [],
+        'APN': []
+    }
+    # add RetrievalDate and APN, note to the dictionary in case scraper fails
+    # these values can still be used for the log
+    # retrieval date to dict
     d1 = date.today()
     rdate = str(d1)
     tax_details['RetrievalDate'].append(rdate)
-    #apn to dict
+    # apn to dict
     tax_details['APN'].append(apn)
-    #note to dict
+    # note to dict
     note = 'Clark '
     tax_details['Note'].append(note)
-    
-    #make sure Selenium can reach the county site
+
+    # make sure Selenium can reach the county site
     try:
-        #Use the WebDriver to visit Clark County Search URL
+        # Use the WebDriver to visit Clark County Search URL
         driver.get("https://trweb.co.clark.nv.us/")
         search = driver.find_element(by=By.NAME, value="Valid_ID")
-        
-        #now check to see if the APN can be searched on the site
+
+        # now check to see if the APN can be searched on the site
         try:
-            #Enter in the sample ACN
+            # Enter in the sample ACN
             search.send_keys(apn)
-            #Search the APN
+            # Search the APN
             search.send_keys(Keys.RETURN)
 
-            #try adding the property tax data to the dictionary
+            # try adding the property tax data to the dictionary
             try:
                 # add tax year to dictionary
-                taxyear = driver.find_element(by=By.XPATH, value="/html/body/table[4]/tbody/tr[3]/td/table/tbody/tr/td[4]")
+                taxyear = driver.find_element(
+                    by=By.XPATH, value="/html/body/table[4]/tbody/tr[3]/td/table/tbody/tr/td[4]")
                 tax_date = taxyear.text
                 short_split_year = tax_date[-2:]
                 split_year = '20' + short_split_year
@@ -267,7 +279,8 @@ def clark_func(apn):
                 try:
                     # tax path for properties with tax value due
                     # looks like there's only one path for these properties
-                    amount_due = driver.find_element(by=By.XPATH, value=clarktax1)
+                    amount_due = driver.find_element(
+                        by=By.XPATH, value=clarktax1)
                     tax_Due = amount_due.text
                     taxes_Due = tax_Due[1:]
                     taxes_Due = taxes_Due.split(',')
@@ -278,12 +291,13 @@ def clark_func(apn):
                 except:
                     try:
                         # tax path for properties with no tax due
-                        amount_due = driver.find_element(by=By.XPATH, value=clarknotax1)
+                        amount_due = driver.find_element(
+                            by=By.XPATH, value=clarknotax1)
                         tax_Due = amount_due.text
                         tax_due_float = float(tax_Due.split('$')[1])
                         tax_details['TaxAmnt'].append(tax_due_float)
                     except Exception as e:
-                        #if still not able to scrape anything, write error to Log
+                        # if still not able to scrape anything, write error to Log
                         terr = f'error: unable to scrape tax amount for {apn}: e'
                         note2 = note + terr
                         WriteLogData(note2, rdate, apn)
@@ -291,12 +305,12 @@ def clark_func(apn):
                 duedate = ''
                 tax_details['DueDate'].append(duedate)
 
-                #assign dict to dataframe
+                # assign dict to dataframe
                 df = pd.DataFrame(tax_details)
-                
-                #put df into database
+
+                # put df into database
                 WriteTaxData(df, curs, conn)
-                
+
             except Exception as e:
                 err1 = f'error: Unable to scrape necessary data for {apn}: {e}'
                 note2 = note + err1
@@ -309,66 +323,69 @@ def clark_func(apn):
         err3 = f'error: Unable to reach county site: {e}'
         note2 = note + err3
         WriteLogData(note2, rdate, apn)
-    
+
+
 def harris_func(apn):
-    #first, make dictionary to store values
+    # first, make dictionary to store values
     tax_details = {
-            'TaxYear':[],
-            'TaxAmnt':[],
-            'DueDate':[],
-            'Note':[],
-            'RetrievalDate':[],
-            'APN':[]
-        }
-    #add RetrievalDate and APN, note to the dictionary in case scraper fails
-        #these values can still be used for the log
-    #retrieval date to dict
+        'TaxYear': [],
+        'TaxAmnt': [],
+        'DueDate': [],
+        'Note': [],
+        'RetrievalDate': [],
+        'APN': []
+    }
+    # add RetrievalDate and APN, note to the dictionary in case scraper fails
+    # these values can still be used for the log
+    # retrieval date to dict
     d1 = date.today()
     rdate = str(d1)
     tax_details['RetrievalDate'].append(rdate)
-    #apn to dict
+    # apn to dict
     tax_details['APN'].append(apn)
-    #note to dict
+    # note to dict
     note = 'Harris '
     tax_details['Note'].append(note)
-    
-    #make sure Selenium can reach the county site
+
+    # make sure Selenium can reach the county site
     try:
-        #Use the WebDriver to visit Clark County Search URL
+        # Use the WebDriver to visit Clark County Search URL
         driver.get("https://www.hctax.net/Property/PropertyTax")
-        #set webdriver size to avoid html structure changing
+        # set webdriver size to avoid html structure changing
         driver.set_window_position(1124, 1024, windowHandle='current')
 
-        #ACN form in this webpage has name "txtSearchValue"
+        # ACN form in this webpage has name "txtSearchValue"
         search = driver.find_element(by=By.NAME, value="txtSearchValue")
-        
-        #try entering the apn into the website's search form
+
+        # try entering the apn into the website's search form
         try:
-            #Enter in the sample ACN
+            # Enter in the sample ACN
             APN = apn
             search.send_keys(APN)
-            #Search the ACN
+            # Search the ACN
             search.send_keys(Keys.RETURN)
-            #need to sleep the function for a few seconds while the links load
+            # need to sleep the function for a few seconds while the links load
             time.sleep(5)
 
-            #click on the link taking you to property tax data
-                #there are different XPATH values
-                    #maybe based on browser window size?
+            # click on the link taking you to property tax data
+            # there are different XPATH values
+            # maybe based on browser window size?
             harrisval2 = "/html/body/div[2]/div/div/div/div/div[2]/fieldset/div/div[2]/table/tbody/tr/td[1]/a"
             harrisval3 = "//*[@id='TaxSearch']/div[2]/table/tbody/tr/td[1]/a"
             try:
-                info_link = driver.find_element(by=By.XPATH, value=harrisval3).click()
-                
-                #add data to the dictionary
+                info_link = driver.find_element(
+                    by=By.XPATH, value=harrisval3).click()
+
+                # add data to the dictionary
                 try:
-                    #add year to dictionary
+                    # add year to dictionary
                     d1 = datetime.now()
                     year = d1.year
                     tax_details['TaxYear'].append(year)
 
-                    #add tax amount to dictionary
-                    amount_due = driver.find_element(by=By.XPATH, value="//*[@id='CurrentStatement']/table[4]/tbody/tr[3]/td[2]")
+                    # add tax amount to dictionary
+                    amount_due = driver.find_element(
+                        by=By.XPATH, value="//*[@id='CurrentStatement']/table[4]/tbody/tr[3]/td[2]")
                     taxes_Due = amount_due.text
                     taxes_Due = taxes_Due[1:]
                     taxes_Due = taxes_Due.split(',')
@@ -377,33 +394,35 @@ def harris_func(apn):
                         tax_Due = tax_Due + x
                     tax_details['TaxAmnt'].append(tax_Due)
 
-                    #add due date to dictionary
+                    # add due date to dictionary
                     duedate = ''
                     tax_details['DueDate'].append(duedate)
 
-                    #assign dict to dataframe
+                    # assign dict to dataframe
                     df = pd.DataFrame(tax_details)
 
-                    #put df into database
+                    # put df into database
                     WriteTaxData(df, curs, conn)
 
                 except Exception as e:
                     err1 = f'error: Unable to web scrape necessary data for {apn}: {e}'
                     note2 = note.append(err1)
                     WriteLogData(note2, rdate, apn)
-                
-            except:
-                info_link = driver.find_element(by=By.XPATH, value=harrisval2).click()
 
-                #add data to the dictionary
+            except:
+                info_link = driver.find_element(
+                    by=By.XPATH, value=harrisval2).click()
+
+                # add data to the dictionary
                 try:
-                    #add year to dictionary
+                    # add year to dictionary
                     d1 = datetime.now()
                     year = d1.year
                     tax_details['TaxYear'].append(year)
 
-                    #add tax amount to dictionary
-                    amount_due = driver.find_element(by=By.XPATH, value="//*[@id='CurrentStatement']/table[4]/tbody/tr[3]/td[2]")
+                    # add tax amount to dictionary
+                    amount_due = driver.find_element(
+                        by=By.XPATH, value="//*[@id='CurrentStatement']/table[4]/tbody/tr[3]/td[2]")
                     taxes_Due = amount_due.text
                     taxes_Due = taxes_Due[1:]
                     taxes_Due = taxes_Due.split(',')
@@ -412,14 +431,14 @@ def harris_func(apn):
                         tax_Due = tax_Due + x
                     tax_details['TaxAmnt'].append(tax_Due)
 
-                    #add due date to dictionary
+                    # add due date to dictionary
                     duedate = ''
                     tax_details['DueDate'].append(duedate)
 
-                    #assign dict to dataframe
+                    # assign dict to dataframe
                     df = pd.DataFrame(tax_details)
 
-                    #put df into database
+                    # put df into database
                     WriteTaxData(df, curs, conn)
 
                 except Exception as e:
@@ -435,41 +454,43 @@ def harris_func(apn):
         note2 = note + err3
         WriteLogData(note2, rdate, apn)
 
+
 def maricopa_func(apn):
-    #first, make dictionary to store values
+    # first, make dictionary to store values
     tax_details = {
-            'TaxYear':[],
-            'TaxAmnt':[],
-            'DueDate':[],
-            'Note':[],
-            'RetrievalDate':[],
-            'APN':[]
-        }
-    #add RetrievalDate and APN, note to the dictionary in case scraper fails
-        #these values can still be used for the log
-    #retrieval date to dict
+        'TaxYear': [],
+        'TaxAmnt': [],
+        'DueDate': [],
+        'Note': [],
+        'RetrievalDate': [],
+        'APN': []
+    }
+    # add RetrievalDate and APN, note to the dictionary in case scraper fails
+    # these values can still be used for the log
+    # retrieval date to dict
     d1 = date.today()
     rdate = str(d1)
     tax_details['RetrievalDate'].append(rdate)
-    #apn to dict
+    # apn to dict
     tax_details['APN'].append(apn)
-    #note to dict
+    # note to dict
     note = 'Maricopa '
     tax_details['Note'].append(note)
-    
-    #for maricopa, you can just put the apn into the url to get to taxdata
-    
-    #search apn to see if property is in the county's database
+
+    # for maricopa, you can just put the apn into the url to get to taxdata
+
+    # search apn to see if property is in the county's database
     try:
-        #take out the dashes in APN and put everything together
+        # take out the dashes in APN and put everything together
         sendkeyfull = apn
-        sendkey = sendkeyfull.replace('-','')
-        #go to the link that displays property tax data
-        driver.get(f'https://treasurer.maricopa.gov/parcel/default.aspx?Parcel={sendkey}')
-        
-        #scrape tax data
+        sendkey = sendkeyfull.replace('-', '')
+        # go to the link that displays property tax data
+        driver.get(
+            f'https://treasurer.maricopa.gov/parcel/default.aspx?Parcel={sendkey}')
+
+        # scrape tax data
         try:
-            #add tax year
+            # add tax year
             try:
                 xpath = "/html/body/form/div[4]/div[2]/div/div/div[2]/div[2]/div[2]/div[1]/h4"
                 year = driver.find_element(by=By.XPATH, value=xpath)
@@ -479,49 +500,49 @@ def maricopa_func(apn):
                 tax_details['TaxYear'].append(split_year)
             except:
                 tax_details['TaxYear'].append('')
-            
-            #no due date
+
+            # no due date
             duedate = ''
             tax_details['DueDate'].append(duedate)
-            
+
             time.sleep(2)
-            
-            #add tax amount to dictionary
-                #different xpaths for taxes due/not due
-                #2 diff paths to get to acutal tax data
-                    #taxpath 1 and 2
-                #another for paths without tax data
-                    #ntpath
+
+            # add tax amount to dictionary
+            # different xpaths for taxes due/not due
+            # 2 diff paths to get to acutal tax data
+            # taxpath 1 and 2
+            # another for paths without tax data
+            # ntpath
             taxpath = '//*[@id="cphMainContent_cphRightColumn_taxDue1"]/tbody/tr/td[6]/a'
-            taxpath2 = "//*[@id='cphMainContent_cphRightColumn_taxDue2']/li[6]/a" 
+            taxpath2 = "//*[@id='cphMainContent_cphRightColumn_taxDue2']/li[6]/a"
             ntpath = "//*[@id='siteInnerContentContainer']/div/div[2]/div[2]/div[4]/div[2]/ul[1]/li[2]/span"
             try:
-                #xpath in case there's tax due 
-                #try for both xpaths
+                # xpath in case there's tax due
+                # try for both xpaths
                 try:
-                    #scrape page using taxpath
+                    # scrape page using taxpath
                     t_due = driver.find_element(by=By.XPATH, value=taxpath)
-                    #get the text of amount due (will contain $ and comma)
+                    # get the text of amount due (will contain $ and comma)
                     td = t_due.text
-                    #remove $ from td object
+                    # remove $ from td object
                     td = td[1:]
-                    #split td on comma to turn into int
+                    # split td on comma to turn into int
                     td = td.split(',')
-                    #need to make a loop to combine the 2 split values
+                    # need to make a loop to combine the 2 split values
                     t_due_float = ''
                     for n in td:
                         t_due_float = t_due_float + n
                     tax_details['TaxAmnt'].append(t_due_float)
                 except:
-                    #scrape page using taxpath2
+                    # scrape page using taxpath2
                     t_due = driver.find_element(by=By.XPATH, value=taxpath2)
-                    #get the text of amount due (will contain $ and comma)
+                    # get the text of amount due (will contain $ and comma)
                     td = t_due.text
-                    #remove $ from td object
+                    # remove $ from td object
                     td = td[1:]
-                    #split td on comma to turn into int
+                    # split td on comma to turn into int
                     td = td.split(',')
-                    #need to make a loop to combine the 2 split values
+                    # need to make a loop to combine the 2 split values
                     t_due_float = ''
                     for n in td:
                         t_due_float = t_due_float + n
@@ -529,17 +550,19 @@ def maricopa_func(apn):
             except:
                 try:
                     # xpath for properties with no tax due
-                    amount_secured = driver.find_element(by=By.XPATH, value=ntpath)
+                    amount_secured = driver.find_element(
+                        by=By.XPATH, value=ntpath)
                     amount_due_secured = amount_secured.text
-                    amount_due_secured_float = float(amount_due_secured.split('$')[1])
+                    amount_due_secured_float = float(
+                        amount_due_secured.split('$')[1])
                     tax_details['TaxAmnt'].append(amount_due_secured_float)
                 except Exception as e:
                     terr = f'error: Unable to scrape tax amount for {apn}: {e}'
                     note2 = note + terr
                     WriteLogData(note2, rdate, apn)
-            #assign dict to dataframe
+            # assign dict to dataframe
             df = pd.DataFrame(tax_details)
-            #put df into database
+            # put df into database
             WriteTaxData(df, curs, conn)
         except Exception as e:
             err1 = f'error: Unable to scrape necessary data for {apn}: {e}'
@@ -550,50 +573,53 @@ def maricopa_func(apn):
         note2 = note + err2
         WriteLogData(note2, rdate, apn)
 
+
 def travis_func(apn):
-    #first, make dictionary to store values
+    # first, make dictionary to store values
     tax_details = {
-            'TaxYear':[],
-            'TaxAmnt':[],
-            'DueDate':[],
-            'Note':[],
-            'RetrievalDate':[],
-            'APN':[]
-        }
-    #add RetrievalDate and APN, note to the dictionary in case scraper fails
-        #these values can still be used for the log
-    #retrieval date to dict
+        'TaxYear': [],
+        'TaxAmnt': [],
+        'DueDate': [],
+        'Note': [],
+        'RetrievalDate': [],
+        'APN': []
+    }
+    # add RetrievalDate and APN, note to the dictionary in case scraper fails
+    # these values can still be used for the log
+    # retrieval date to dict
     d1 = date.today()
     rdate = str(d1)
     tax_details['RetrievalDate'].append(rdate)
-    #apn to dict
+    # apn to dict
     tax_details['APN'].append(apn)
-    #note to dict
+    # note to dict
     note = 'Travis '
     tax_details['Note'].append(note)
-    
-    #first make sure Selenium can reach the county site
-    try:
-        #we could use the send key as different variable that could be directly changed
-        sendkeyfull = str(apn)
-        sendkey = sendkeyfull.replace('-','')
 
-        #Use the WebDriver to visit San Diego Search URL
+    # first make sure Selenium can reach the county site
+    try:
+        # we could use the send key as different variable that could be directly changed
+        sendkeyfull = str(apn)
+        sendkey = sendkeyfull.replace('-', '')
+
+        # Use the WebDriver to visit San Diego Search URL
         driver.get("https://travis.go2gov.net/cart/responsive/search.do")
-        
-        #check if apn is in county's database
+
+        # check if apn is in county's database
         try:
-            #ACN form in this webpage has name "txtSearchValue"
-            search = driver.find_element(by=By.NAME, value="criteria.heuristicSearch")
-            #Enter in the sample ACN
+            # ACN form in this webpage has name "txtSearchValue"
+            search = driver.find_element(
+                by=By.NAME, value="criteria.heuristicSearch")
+            # Enter in the sample ACN
             search.send_keys(sendkey)
-            #Search the ACN
+            # Search the ACN
             search.send_keys(Keys.RETURN)
 
-            #click on the box to proceeed to pay bills
-            info_link = driver.find_element(by=By.XPATH, value="/html/body/div[1]/div[2]/div[2]/form[1]/table/tbody/tr/td[1]/div[1]/a/span").click()
+            # click on the box to proceeed to pay bills
+            info_link = driver.find_element(
+                by=By.XPATH, value="/html/body/div[1]/div[2]/div[2]/form[1]/table/tbody/tr/td[1]/div[1]/a/span").click()
 
-            #scrape tax data
+            # scrape tax data
             try:
                 # add tax year to dict
                 d1 = datetime.now()
@@ -601,16 +627,18 @@ def travis_func(apn):
                 tax_details['TaxYear'].append(year)
                 '''year = driver.find_element(by=By.XPATH, value="/html/body/div/div[2]/div[2]/div[2]/table/tbody/tr/td[1]/a/span")
                 tax_year = year.text
-                tax_details['TaxYear'].append(tax_year)''' #alternative method
+                tax_details['TaxYear'].append(tax_year)'''  # alternative method
 
                 try:
                     # add tax amount to dict
-                    amount_secured = driver.find_element(by=By.XPATH, value="/html/body/div/div[2]/div[2]/div[2]/table/tbody/tr/td[5]")
+                    amount_secured = driver.find_element(
+                        by=By.XPATH, value="/html/body/div/div[2]/div[2]/div[2]/table/tbody/tr/td[5]")
                     amount_due_secured = amount_secured.text
-                    amount_due_secured_float = float(amount_due_secured.split('$')[1])
+                    amount_due_secured_float = float(
+                        amount_due_secured.split('$')[1])
                     tax_details['TaxAmnt'].append(amount_due_secured_float)
                 except Exception as e:
-                    #if still not able to scrape anything, write error to Log
+                    # if still not able to scrape anything, write error to Log
                     terr = f'error: Unable to scrape tax amount for {apn}: e'
                     note2 = note + terr
                     WriteLogData(note2, rdate, apn)
@@ -619,10 +647,10 @@ def travis_func(apn):
                 duedate = ''
                 tax_details['DueDate'].append(duedate)
 
-                #assign dict to dataframe
+                # assign dict to dataframe
                 df = pd.DataFrame(tax_details)
 
-                #put df into database
+                # put df into database
                 WriteTaxData(df, curs, conn)
 
             except Exception as e:
@@ -638,53 +666,53 @@ def travis_func(apn):
         note2 = note + err3
         WriteLogData(note2, rdate, apn)
 
+
 def sd_func(apn):
-    #first, make dictionary to store values
+    # first, make dictionary to store values
     tax_details = {
-            'TaxYear':[],
-            'TaxAmnt':[],
-            'DueDate':[],
-            'Note':[],
-            'RetrievalDate':[],
-            'APN':[]
-        }
-    #add RetrievalDate and APN to the dictionary in case scraper fails
-        #these values can still be used for the log
-    #retrieval date to dict
+        'TaxYear': [],
+        'TaxAmnt': [],
+        'DueDate': [],
+        'Note': [],
+        'RetrievalDate': [],
+        'APN': []
+    }
+    # add RetrievalDate and APN to the dictionary in case scraper fails
+    # these values can still be used for the log
+    # retrieval date to dict
     d1 = date.today()
     rdate = str(d1)
     tax_details['RetrievalDate'].append(rdate)
-    #apn to dict
+    # apn to dict
     tax_details['APN'].append(apn)
-    #note to dict
+    # note to dict
     note = 'San Diego '
-    
-    #make sure Selenium can reach the county site
+
+    # make sure Selenium can reach the county site
     try:
-        #Use the WebDriver to visit San Diego Search URL
+        # Use the WebDriver to visit San Diego Search URL
         driver.get("https://iwr.sdttc.com/paymentapplication/Search.aspx")
-        #set webdriver size to avoid html structure changing
+        # set webdriver size to avoid html structure changing
         driver.set_window_position(1124, 1024, windowHandle='current')
-        #click on the arrow to open the input box
+        # click on the arrow to open the input box
         xpath = "/html/body/form/div[3]/div[3]/div[2]/div[3]/div[5]/div[1]/div[1]/h1/a"
         info_link = driver.find_element(by=By.XPATH, value=xpath).click()
         time.sleep(5)
-        
-        #search the county site to see if the apn is in county's database
+
+        # search the county site to see if the apn is in county's database
         try:
-            #APN form in this webpage has name "txtSearchValue"
+            # APN form in this webpage has name "txtSearchValue"
             sendkeyfull = str(apn)
-            sendkey = sendkeyfull.replace('-','')
+            sendkey = sendkeyfull.replace('-', '')
             id1 = "PaymentApplicationContent_tbParcelNumber"
             search = driver.find_element(by=By.ID, value=id1)
             time.sleep(5)
-            #Enter in the sample APN
+            # Enter in the sample APN
             search.send_keys(sendkey)
-            #Search the ACN
+            # Search the ACN
             search.send_keys(Keys.RETURN)
-            
-            
-            #add items to the dictionary
+
+            # add items to the dictionary
             try:
                 # add tax year
                 d1 = datetime.now()
@@ -695,7 +723,8 @@ def sd_func(apn):
                 try:
                     # path for properties with tax due
                     sdtax1 = '//*[@id="PaymentApplicationContent_gvSecured"]/tbody/tr[2]/td[11]'
-                    amount_secured = driver.find_element(by=By.XPATH, value=sdtax1)
+                    amount_secured = driver.find_element(
+                        by=By.XPATH, value=sdtax1)
                     taxes_Due = amount_secured.text
                     taxes_Due = taxes_Due[1:]
                     # if the amount due is in the thousands, there will be a comma in the number
@@ -717,7 +746,8 @@ def sd_func(apn):
                 except:
                     try:
                         # path for if no taxes are due
-                        amount_secured = driver.find_element(by=By.XPATH, value="/html/body/form/div[3]/div[3]/div[2]/div[2]/div[5]/div[2]/div/table/tbody/tr[3]/td[7]")
+                        amount_secured = driver.find_element(
+                            by=By.XPATH, value="/html/body/form/div[3]/div[3]/div[2]/div[2]/div[5]/div[2]/div/table/tbody/tr[3]/td[7]")
                         amount_due_secured = amount_secured.text
                         tax_Due = ''
                         for x in taxes_Due:
@@ -727,25 +757,26 @@ def sd_func(apn):
                         sdnote = '-NOTICE: this scraper only gathers secured property tax data for this APN.'
                         tax_details['Note'].append(note+sdnote)
                     except Exception as e:
-                        #if still not able to scrape anything, write error to Log
+                        # if still not able to scrape anything, write error to Log
                         terr = f'error: Unable to scrape tax amount for {apn}: e'
                         note2 = note + terr
                         WriteLogData(note2, rdate, apn)
 
-                #add due date
+                # add due date
                 try:
-                    duedate = driver.find_element(by=By.XPATH, value="/html/body/form/div[3]/div[3]/div[2]/div[2]/div[5]/div[2]/div/table/tbody/tr[3]/td[9]")
+                    duedate = driver.find_element(
+                        by=By.XPATH, value="/html/body/form/div[3]/div[3]/div[2]/div[2]/div[5]/div[2]/div/table/tbody/tr[3]/td[9]")
                     tax_date = duedate.text
                     tax_details['DueDate'].append(tax_date)
                 except:
                     tax_details['DueDate'].append('NULL')
-                
-                #assign dict to dataframe
+
+                # assign dict to dataframe
                 df = pd.DataFrame(tax_details)
-                
-                #put df in database
+
+                # put df in database
                 WriteTaxData(df, curs, conn)
-                
+
             except Exception as e:
                 err1 = f'Unable to scrape necessary data for {apn}: {e}'
                 note2 = note + err1
@@ -758,50 +789,52 @@ def sd_func(apn):
         err3 = f'County website could not be reached: {e}'
         note2 = note + err3
         WriteLogData(note2, rdate, apn)
-    
+
+
 def washoe_func(apn):
-    #first, make dictionary to store values
+    # first, make dictionary to store values
     tax_details = {
-            'TaxYear':[],
-            'TaxAmnt':[],
-            'DueDate':[],
-            'Note':[],
-            'RetrievalDate':[],
-            'APN':[]
-        }
-    #add RetrievalDate and APN, note to the dictionary in case scraper fails
-        #these values can still be used for the log
-    #retrieval date to dict
+        'TaxYear': [],
+        'TaxAmnt': [],
+        'DueDate': [],
+        'Note': [],
+        'RetrievalDate': [],
+        'APN': []
+    }
+    # add RetrievalDate and APN, note to the dictionary in case scraper fails
+    # these values can still be used for the log
+    # retrieval date to dict
     d1 = date.today()
     rdate = str(d1)
     tax_details['RetrievalDate'].append(rdate)
-    #apn to dict
+    # apn to dict
     tax_details['APN'].append(apn)
-    #note to dict
+    # note to dict
     note = 'Washoe '
     tax_details['Note'].append(note)
-    
-    
-    #make sure Selenium can reach the county site
+
+    # make sure Selenium can reach the county site
     try:
-        #we could use the send key as different variable that could be directly changed
+        # we could use the send key as different variable that could be directly changed
         sendkeyfull = str(apn)
-        sendkey = sendkeyfull.replace('-','')
-        #now search the apn to see whether it's in the county site
+        sendkey = sendkeyfull.replace('-', '')
+        # now search the apn to see whether it's in the county site
         try:
-            #Use the WebDriver to visit Clark County Search URL
-            driver.get("https://nv-washoe.publicaccessnow.com/Treasurer/TaxSearch.aspx")
-            #set webdriver size to avoid html structure changing
+            # Use the WebDriver to visit Clark County Search URL
+            driver.get(
+                "https://nv-washoe.publicaccessnow.com/Treasurer/TaxSearch.aspx")
+            # set webdriver size to avoid html structure changing
             driver.set_window_position(1124, 1024, windowHandle='current')
             time.sleep(10)
 
-            #rest of the selenium code to get to tax data page
-            #ACN form in this webpage has name "txtSearchValue"
-            search = driver.find_element(by=By.CLASS_NAME, value="form-control")
+            # rest of the selenium code to get to tax data page
+            # ACN form in this webpage has name "txtSearchValue"
+            search = driver.find_element(
+                by=By.CLASS_NAME, value="form-control")
             time.sleep(4)
-            #Enter in the sample ACN
+            # Enter in the sample ACN
             search.send_keys(sendkey)
-            #Search the ACN
+            # Search the ACN
             search.send_keys(Keys.RETURN)
             time.sleep(15)
 
@@ -823,10 +856,10 @@ def washoe_func(apn):
                 duedate = ''
                 tax_details['DueDate'].append(duedate)
 
-                #assign dict to dataframe
+                # assign dict to dataframe
                 df = pd.DataFrame(tax_details)
 
-                #put df in database
+                # put df in database
                 WriteTaxData(df, curs, conn)
             except Exception as e:
                 err1 = f'error: Unable to scrape necessary data for {apn}: {e}'
@@ -841,14 +874,16 @@ def washoe_func(apn):
         note2 = note + err3
         WriteLogData(note2, rdate, apn)
 
-#function to add the scraped data to database
+# function to add the scraped data to database
+
+
 def WriteTaxData(df, curs, conn):
-    #close the driver
+    # close the driver
     driver.quit()
-    
-    #insert the dictionary into the database
-    #TaxData table: TaxDataID, TaxYear, TaxAmnt, DueDate, Note, RetrievalDate, APN(FK)
-    TY = df.loc[0,'TaxYear']
+
+    # insert the dictionary into the database
+    # TaxData table: TaxDataID, TaxYear, TaxAmnt, DueDate, Note, RetrievalDate, APN(FK)
+    TY = df.loc[0, 'TaxYear']
     if TY == '':
         TY = "NULL"
     else:
@@ -857,62 +892,68 @@ def WriteTaxData(df, curs, conn):
     N = df.loc[0, 'Note']
     DD = df.loc[0, 'DueDate']
     DD = DD.strip()
-    #set duedate to NULL if there are no values for it
+    # set duedate to NULL if there are no values for it
     if DD == '':
         DD = "NULL"
     else:
         DD = "'{}'".format(DD)
-    #retrieval date can also be created here
+    # retrieval date can also be created here
     RD = datetime.now()
     RD = RD.strftime('%Y-%m-%d %H:%M:%S')
-    #RD = df.loc[0, 'RetrievalDate']
+    # RD = df.loc[0, 'RetrievalDate']
     PN = df.loc[0, 'APN']
-    #strip apn of any leading/ending spaces that would mess up the insert
+    # strip apn of any leading/ending spaces that would mess up the insert
     PN = PN.strip()
 
-    #we wanna see whether there's already tax data for the season that's been pulled
-        #and if there is, we wanna update the db to have the new tax data(if there is a diff amount listed on the county site)
+    # we wanna see whether there's already tax data for the season that's been pulled
+    # and if there is, we wanna update the db to have the new tax data(if there is a diff amount listed on the county site)
     try:
         # select the tax amount from database
         curs.execute(
-            "SELECT TaxAmount FROM TaxData WHERE APN = '{}' AND TaxYear = {} AND DueDate = {}".format(PN, TY, DD)
+            "SELECT TaxAmount FROM TaxData WHERE APN = '{}' AND TaxYear = {} AND DueDate = {}".format(
+                PN, TY, DD)
         )
         row2 = curs.fetchall()
         # make it so that if there's tax amount for the apn in the same season, we update the database
         if curs.rowcount > 0:
             if float(row2[0][0]) != TA:
-                #update record
+                # update record
                 curs.execute(
-                "UPDATE TaxData SET TaxAmount = {} WHERE APN = '{}' AND TaxYear = {}".format(TA, PN, TY)
+                    "UPDATE TaxData SET TaxAmount = {} WHERE APN = '{}' AND TaxYear = {}".format(
+                        TA, PN, TY)
                 )
                 conn.commit()
         else:
-            insert_query = "INSERT INTO TaxData (TaxYear, TaxAmount, DueDate, Note, RetrievalDate, APN) VALUES ({}, {}, {}, '{}', '{}', '{}')".format(TY, TA, DD, N, RD, PN)
+            insert_query = "INSERT INTO TaxData (TaxYear, TaxAmount, DueDate, Note, RetrievalDate, APN) VALUES ({}, {}, {}, '{}', '{}', '{}')".format(
+                TY, TA, DD, N, RD, PN)
             curs.execute(insert_query)
             conn.commit()
-        #add successful insert to the log table
+        # add successful insert to the log table
         WriteLogData(N, RD, PN)
     except Exception as e:
         N = N+e
-        #add unsuccessful insert to the log table
+        # add unsuccessful insert to the log table
         WriteLogData(N, RD, PN)
 
-#function for adding data to the log table
+# function for adding data to the log table
+
+
 def WriteLogData(Note, RetrievalDate, APN):
-    #close the driver
+    # close the driver
     driver.quit()
-    
-    #strip apn of any leading/ending spaces
+
+    # strip apn of any leading/ending spaces
     PN2 = APN.strip()
     try:
-        log_insert_query = "INSERT INTO Log (Note, RetrievalDate, APN) VALUES ('{}', '{}', '{}')".format(Note, RetrievalDate, PN2)
+        log_insert_query = "INSERT INTO Log (Note, RetrievalDate, APN) VALUES ('{}', '{}', '{}')".format(
+            Note, RetrievalDate, PN2)
         curs.execute(log_insert_query)
         conn.commit()
-        #add info to local log file too
+        # add info to local log file too
         logging.info(f"Retrieved APN {PN2} Note: {Note}")
     except Exception as e:
         print("ERROR: "+str(e))
-        #add info to local log file too
+        # add info to local log file too
         logging.error("ERROR: "+str(e))
 
 #
@@ -999,15 +1040,24 @@ sleep_time = config.loop_vars['sleep_time']
 #
 #
 #
+# set variables for loop
+i = 0
+length = len(prop_df.index)
+recs_proc = 20
+records_processed = 0
+sleep_time = 30
+prevtime = datetime.now()
 
 try:
     while i < length:
+        print(f"processing record {i+1} of {length}")
         #make sure you don't make too many requests in one sitting
         if records_processed == recs_proc:
             break
         
         #activate the WebDriver
-            #add options so you don't get weird bluetooth availability errors
+        print("Activating WebDriver...")
+        #add options so you don't get weird bluetooth availability errors
         options = webdriver.ChromeOptions()
         options.add_experimental_option('excludeSwitches', ['enable-logging'])
         driver = webdriver.Chrome(service=s, options=options)
@@ -1018,7 +1068,7 @@ try:
         pf = prop_df.loc[i, 'ParsingFunction']
         #put the scraper and apn together to call the functions
         strFnToRun="{}(\"{}\")".format(pf,apn)
-        print(strFnToRun)
+        print(f"function to be called: {strFnToRun}")
         #add info to log file
         logging.debug(strFnToRun)
         #call the function based on the apn's ParsingFunction we got from the db
@@ -1043,7 +1093,6 @@ try:
     print("scraper has finished")
 
     closing_func()
-except:
+except Exception as e:
     #failsafe in case the loop isn't able to work
-    print(f'Scraper was not able to start.\n Make sure the Chromedriver is installed and that the function has a proper connection to the database, then try again. ')
-    closing_func()
+    print(f'Scraper was not able to start.\nError message: {str(e)}')
